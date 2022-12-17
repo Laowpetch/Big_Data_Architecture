@@ -1,0 +1,219 @@
+Hadoop Cluster Cheat Sheet
+#DONT TRUST IT LIKE A BIBLE.
+
+Setup Hadoop Single node
+	Create Instance
+		- Create Instance
+	Update System Software Repository
+		- sudo apt-get update
+
+	Configure SSH #Careful on this operation, It may cause Permission Denied(Publickey) when you make cluster
+		- sudo apt-get install openssh-server
+		- ssh-keygen
+		- cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys 
+		- ssh localhost
+		- exit
+
+	Install Java
+		- sudo apt-get install openjdk-8-jdk
+		- java -version
+
+	Download and Extract Hadoop
+		- wget https://archive.apache.org/dist/hadoop/core/hadoop-2.6.0/hadoop-2.6.0.tar.gz
+		- tar -xvf hadoop-2.6.0.tar.gz
+		- sudo mv ./hadoop-2.6.0 /usr/local/hadoop
+
+	Install Hadoop
+		- nano ~/.bashrc
+		
+		- Add these lines at the bottom:
+			export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+			export PATH=$PATH:$JAVA_HOME/bin
+
+			export HADOOP_HOME=/usr/local/hadoop
+			export PATH=$PATH:$HADOOP_HOME/bin
+			export PATH=$PATH:$HADOOP_HOME/sbin
+		- source ~/.bashrc
+		- cd /usr/local
+		- sudo mkdir /var/log/hadoop
+		- sudo chown -R ubuntu:ubuntu /var/log/hadoop
+		- cd /usr/local/hadoop/etc/hadoop
+		- nano hadoop-env.sh
+		- Edit Hadoop shell script:
+			export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+			export HADOOP_LOG_DIR=/var/log/hadoop
+		- nano yarn-env.sh
+		- Edit YARN shell script:
+			export YARN_LOG_DIR=/var/log/hadoop
+
+	Configure Hadoop
+		- nano core-site.xml
+		- Edit core-site.xml:
+			<configuration>
+        			<property>
+                		<name>fs.defaultFS</name>
+                		<value>hdfs://"Your private IPV4":9000</value>
+        			</property>
+			</configuration>
+		- sudo mkdir -p /var/hadoop_data/namenode
+		- sudo mkdir -p /var/hadoop_data/datanode
+		- sudo chown ubuntu:ubuntu -R /var/hadoop_data
+		- nano hdfs-site.xml
+		- Edit hdfs-site.xml:
+			<configuration>
+        			<property>
+                		<name>dfs.replication</name>
+               		 <value>1</value>
+       			</property>
+        			<property>
+                		<name>dfs.namenode.name.dir</name>
+                		<value>file:/var/hadoop_data/namenode</value>
+        			</property>
+        			<property>
+                		<name>dfs.datanode.data.dir</name>
+                		<value>file:/var/hadoop_data/datanode</value>
+        			</property>
+			</configuration>
+		- nano yarn-site.xml
+		- Edit yarn-site.xml:
+			<configuration>
+        			<property>
+                		<name>yarn.resourcemanager.hostname</name>
+                		<value>"Your private IPV4"</value>
+        			</property>
+        			<property>
+               		<name>yarn.resourcemanager.scheduler.address</name>
+                		<value>"Your private IPV4":8030</value>
+       			</property>
+        			<property>
+                		<name>yarn.resourcemanager.resource-tracker.address</name>
+                		<value>"Your private IPV4":8031</value>
+        			</property>
+        			<property>
+                		<name>yarn.resourcemanager.address</name>
+                		<value>"Your private IPV4":8032</value>
+        			</property>
+        			<property>
+                		<name>yarn.resourcemanager.admin.address</name>
+                		<value>"Your private IPV4":8033</value>
+        			</property>
+        			<property>
+                		<name>yarn.resourcemanager.webapp.address</name>
+                		<value>"Your private IPV4":8088</value>
+        			</property>
+        			<property>
+                		<name>yarn.nodemanager.aux-services</name>
+                		<value>mapreduce_shuffle</value>
+        			</property>
+        			<property>
+                		<name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
+                		<value>org.apache.hadoop.mapred.ShuffleHandler</value>
+        			</property>
+			</configuration>
+		- cp mapred-site.xml.template mapred-site.xml
+		- nano mapred-site.xml
+		- Edit mapred-site.xml:
+			<configuration>
+        			<property>
+                		<name>mapreduce.framework.name</name>
+                		<value>yarn</value>
+        			</property>
+			</configuration>
+
+	Format Namenode
+		- hdfs namenode -format
+		- hdfs namenode -format
+
+	Start Hadoop
+		- start-dfs.sh
+		- jps
+		- start-yarn.sh
+		- jps
+
+	Access Hadoop Web Console #if you can't access this, Please check your security group
+		- http://"Your public IPV4":50070
+	Stop
+		- stop-yarn.sh
+		- stop-dfs.sh
+		- stop your Remote connection
+	Make Image
+		- Make Image
+
+Setup Hadoop Cluster (2 Node)
+	Create 2 Instances from Images
+		- Create 2 Instances from Images
+	At Master: Edit host file
+		- sudo nano /etc/hosts
+			"Your Private Master IPV4" "Your Private Master DNS IPV4"
+			"Your Private Slave1 IPV4" "Your Private Slave1 DNS IPV4"
+			"Your Private Slave2 IPV4" "Your Private Slave2 DNS IPV4"
+	At Slave1 & Slave2 : Append new key to key file
+		- scp /home/ubuntu/.ssh/id_rsa.pub "Your Private Slave1 DNS IPV4":/home/ubuntu/.ssh/master.pub
+		- scp /home/ubuntu/.ssh/id_rsa.pub "Your Private Slave2 DNS IPV4":/home/ubuntu/.ssh/master.pub
+	At Slave1 & Slave2 : Append new key to key file
+		- cat /home/ubuntu/.ssh/master.pub >> /home/ubuntu/.ssh/authorized_keys
+	At Master : Test ssh to Others
+		- ssh "Your Private Slave1 DNS IPV4"
+		- ssh "Your Private Slave2 DNS IPV4"
+	At Slave1 : Test ssh to Others
+		- ssh "Your Private Master DNS IPV4"
+		- ssh "Your Private Slave2 DNS IPV4"
+	At Slave2 : Test ssh to Others
+		- ssh "Your Private Master DNS IPV4"
+		- ssh "Your Private Slave1 DNS IPV4"
+	At Master : Add Slave1 & Slave2 to Hadoop slave file
+		- nano /usr/local/hadoop/etc/hadoop/slaves
+		- Add slave private DNS
+			localhost
+			Your Private Slave1 IPV4
+			Your Private Slave2 IPV4
+	At Master : Edit hdfs-site.xml
+		- nano /usr/local/hadoop/etc/hadoop/hdfs-site.xml
+		Edit replication to 2
+	At all nodes : Remove directories of namenodeand datanode
+		- rm -rf /var/hadoop_data/namenode/*
+		- rm -rf /var/hadoop_data/datanode/*
+	At Master: Format namenode
+		- hdfs namenode -format
+		- start-dfs.sh
+	At all nodes: Use jpsto check result // should see NameNodestarted on Master and DataNodestarted on both Slave1&Slave2
+		- jps
+	At Master: Execute start-yarn.sh
+		- start-yarn.sh
+	At all nodes: Use jpsto check result // should see NameManagerstarted on both Slave1&Slave2
+		- jps
+	Check Namenode Information:
+		- http://"Your Public Master DNS IPV4":50070
+	Check Datanode Information:
+		- http://"Your Public Slave1 DNS IPV4":50070
+		- http://"Your Public Slave2 DNS IPV4":50070
+
+Import Data From Slave1
+	AtSlave1: Import data to Hadoop cluster
+		- hdfs dfs -copyFromLocal ./input_data.txt /inputs/input_data.txt
+		- hdfs dfs –ls /inputs
+	Master & Slave2: Check imported file
+		- hdfs dfs –ls /inputs
+	At Slave1 & Slave2: Use jpsto see Application Master and Yarn Child Container
+		- jps
+
+Mapreduce
+	Create a Java file
+		- nano "Your file name".java
+	Create a directory for complied code and compile
+		- mkdir wordcount_classes
+		- javac -classpath /usr/local/hadoop/share/hadoop/common/hadoop-common-2.6.0.jar:/usr/local/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-client-core-2.6.0.jar:/usr/local/hadoop/share/hadoop/common/lib/commons-cli-1.2.jar -d wordcount_classes WordCount.java
+	Create a Jar file
+		- jar -cvf ./wordcount.jar -C wordcount_classes/ .
+	Add a MapReduce Job to YARN
+		- yarn jar ./wordcount.jar WordCount /inputs/* /outputs/wordcount_output_dir01
+	View the result using command line
+		- hdfs dfs -cat /outputs/wordcount_output_dir01/part-r-00000
+	View the result using web console
+		- http://"Your Public Master DNS IPV4":50070
+
+
+**********************************************************************************************
+Create inputs and outputs Folders
+- hdfs dfs -mkdir /inputs
+- hdfs dfs -mkdir /outputs
